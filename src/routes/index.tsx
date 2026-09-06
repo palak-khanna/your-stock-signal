@@ -127,7 +127,13 @@ function Dashboard() {
     return watchlist.data
       .map((item) => {
         const m = market.data.find((x) => x.ticker === item.ticker);
-        if (!m || !m.price) return null;
+        if (!m || !m.price) {
+          return {
+            item,
+            market: { ticker: item.ticker, price: 0, prevClose: 0, closes: [] },
+            relevance: { score: 0, worthALook: false, changePct: 0, reasons: ["Price data loading — check back shortly"] },
+          };
+        }
         const relevance = computeRelevance({
           closes: m.closes,
           price: m.price,

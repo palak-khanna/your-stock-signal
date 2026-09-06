@@ -84,6 +84,14 @@ function AddStock() {
       );
       return;
     }
+
+    const { getMarketSnapshot } = await import("@/lib/market.functions");
+    const snap = await getMarketSnapshot({ data: { tickers: [selected] } });
+    const price = snap[0]?.price;
+    if (price) {
+      await supabase.from("price_snapshots").insert({ ticker: selected, price });
+    }
+    
     await queryClient.invalidateQueries({ queryKey: ["watchlist", userId] });
     toast.success(`${getStock(selected).name} added to your watchlist`);
     navigate({ to: "/" });
