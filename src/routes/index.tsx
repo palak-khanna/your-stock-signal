@@ -7,6 +7,7 @@ import { computeRelevance, type ReasonType } from "@/lib/relevance";
 import { SEED_TICKERS, getStock, shortTicker } from "@/lib/stocks";
 import { StockRow, LogoTile } from "@/components/StockRow";
 import { AppHeader } from "@/components/AppHeader";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/")({
   ssr: false,
@@ -91,8 +92,24 @@ async function loadWatchlist(userId: string): Promise<WatchItem[]> {
     target_event_date: r.target_event_date,
   }));
 }
+function freshnessLabel(m: { source: "live" | "history"; lastUpdated: number | null }) {
+  if (m.source === "live") return "Live";
+  if (!m.lastUpdated) return "Price loading…";
+  const mins = Math.round((Date.now() - m.lastUpdated) / 60000);
+  if (mins < 60) return `Updated ${mins}m ago`;
+  return `Updated ${Math.round(mins / 60)}h ago`;
+}
 
 function Dashboard() {
+  const queryClient = useQueryClient();
+
+  const removeStock = async (ticker: string) => {
+    const ok = window.confirm(`Remove ${getStock(ticker).name} from your watchlist?`);
+    if (!ok) return;
+    await supabase.from("watchlist_items").delete().eq("user_id", userId).eq("ticker", ticker);
+    await queryClient.invalidateQueries({ queryKey: ["watchlist", userId] });
+  };
+  
   const { userId } = Route.useRouteContext();
   const [showQuiet, setShowQuiet] = useState(false);
 
@@ -130,10 +147,11 @@ function Dashboard() {
         if (!m || !m.price) {
           return {
             item,
-            market: { ticker: item.ticker, price: 0, prevClose: 0, closes: [] },
+            market: { ticker: item.ticker, price: 0, prevClose: 0, closes: [], source: "history" as const, lastUpdated: null },
             relevance: { score: 0, worthALook: false, changePct: 0, reasons: ["Price data loading — check back shortly"] },
           };
         }
+
         const relevance = computeRelevance({
           closes: m.closes,
           price: m.price,
@@ -191,8 +209,9 @@ function Dashboard() {
               ) : (
                 <div className="mt-1">
                   {worth.map(({ item, market: m, relevance }) => (
-                    <div key={item.ticker} className="row-divider py-1">
-                      <div className="[&>a]:border-b-0">
+                  <div key={item.ticker} className="row-divider py-1">
+                    <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1 [&>a]:border-b-0">
                         <StockRow
                           ticker={item.ticker}
                           price={m.price}
@@ -200,14 +219,23 @@ function Dashboard() {
                           closes={m.closes}
                         />
                       </div>
-                      <p
-                        className="-mt-1 mb-2 ml-[48px] pr-2 text-[12px] leading-snug"
-                        style={{ color: "var(--color-primary-dark)" }}
+                      <button
+                        onClick={() => removeStock(item.ticker)}
+                        aria-label={`Remove ${item.ticker}`}
+                        className="shrink-0 rounded-md px-2 py-1 text-[13px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                       >
-                        {relevance.reasons[0]}
-                      </p>
+                        ✕
+                      </button>
                     </div>
-                  ))}
+                    <p
+                      className="-mt-1 mb-0.5 ml-[48px] pr-2 text-[12px] leading-snug"
+                      style={{ color: "var(--color-primary-dark)" }}
+                    >
+                      {relevance.reasons[0]}
+                    </p>
+                    <p className="mb-2 ml-[48px] text-[11px] text-muted-foreground">{freshnessLabel(m)}</p>
+                  </div>
+                ))}
                 </div>
               )}
             </section>
@@ -225,15 +253,25 @@ function Dashboard() {
               {showQuiet ? (
                 <div className="mt-1">
                   {quiet.map(({ item, market: m, relevance }) => (
-                    <StockRow
-                      key={item.ticker}
-                      ticker={item.ticker}
-                      price={m.price}
-                      changePct={relevance.changePct}
-                      closes={m.closes}
-                      dim
-                      note="quiet"
-                    />
+                    <div key={item.ticker} className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <StockRow
+                          ticker={item.ticker}
+                          price={m.price}
+                          changePct={relevance.changePct}
+                          closes={m.closes}
+                          dim
+                          note={freshnessLabel(m)}
+                        />
+                      </div>
+                      <button
+                        onClick={() => removeStock(item.ticker)}
+                        aria-label={`Remove ${item.ticker}`}
+                        className="shrink-0 rounded-md px-2 py-1 text-[13px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   ))}
                 </div>
               ) : (

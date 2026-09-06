@@ -19,6 +19,8 @@ export const getMarketSnapshot = createServerFn({ method: "POST" })
           price: series.price,
           prevClose: series.prevClose,
           closes: series.points.map((p) => p.c),
+          source: series.source,
+          lastUpdated: series.points.length ? series.points[series.points.length - 1]!.t : null,
         };
       }),
     );
