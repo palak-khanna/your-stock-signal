@@ -14,7 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      price_snapshots: {
+        Row: {
+          fetched_at: string
+          id: string
+          price: number
+          ticker: string
+        }
+        Insert: {
+          fetched_at?: string
+          id?: string
+          price: number
+          ticker: string
+        }
+        Update: {
+          fetched_at?: string
+          id?: string
+          price?: number
+          ticker?: string
+        }
+        Relationships: []
+      }
+      viewed_stocks: {
+        Row: {
+          id: string
+          ticker: string
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          id?: string
+          ticker: string
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          id?: string
+          ticker?: string
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: []
+      }
+      watchlist_items: {
+        Row: {
+          created_at: string
+          id: string
+          reason_type: Database["public"]["Enums"]["reason_type"]
+          target_event_date: string | null
+          target_price: number | null
+          ticker: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason_type?: Database["public"]["Enums"]["reason_type"]
+          target_event_date?: string | null
+          target_price?: number | null
+          ticker: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason_type?: Database["public"]["Enums"]["reason_type"]
+          target_event_date?: string | null
+          target_price?: number | null
+          ticker?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +94,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      reason_type: "buy_target" | "event_watch" | "holding" | "exploring"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +221,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      reason_type: ["buy_target", "event_watch", "holding", "exploring"],
+    },
   },
 } as const
